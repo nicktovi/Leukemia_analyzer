@@ -158,7 +158,10 @@ button {
 <h3>Analysis</h3>
 
 <button onclick="analyze()">Run Analysis</button>
-
+<button onclick="exportPDF(window.lastResult, window.lastInput)">
+Export PDF Report
+</button>
+    
 <div id="results" class="result"></div>
 <div id="interpretation" class="interpretation"></div>
 
