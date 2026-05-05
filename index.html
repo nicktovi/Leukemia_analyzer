@@ -1,57 +1,287 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Leukemia Analyzer v2</title>
+<head >
+<title>Leukemia Clinical Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body {
+    font-family: "Segoe UI", sans-serif;
+    background: #0b1220;
+    color: #e5e7eb;
+    margin: 0;
+}
+
+.header {
+    background: #111827;
+    padding: 15px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 20px;
+}
+
+.card {
+    background: #1f2937;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.card h3 {
+    margin-top: 0;
+    font-size: 16px;
+    color: #9ca3af;
+}
+
+input {
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0 10px;
+    border-radius: 6px;
+    border: none;
+    background: #374151;
+    color: white;
+}
+
+.tag {
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 4px;
+    border-radius: 6px;
+    background: #374151;
+    cursor: pointer;
+}
+
+.tag.active {
+    background: #22c55e;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background: #22c55e;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.result {
+    margin-top: 15px;
+}
+
+.bar {
+    height: 10px;
+    border-radius: 5px;
+    background: #374151;
+    margin: 5px 0;
+}
+
+.fill {
+    height: 100%;
+    border-radius: 5px;
+}
+
+.AML { background: #ef4444; }
+.ALL { background: #f97316; }
+.CLL { background: #3b82f6; }
+.CML { background: #22c55e; }
+
+.interpretation {
+    margin-top: 10px;
+    font-size: 14px;
+    color: #d1d5db;
+}
+</style>
 </head>
+
 <body>
 
-<h2>Leukemia Diagnostic Tool (v2)</h2>
+<div class="header">Leukemia Clinical Dashboard</div>
 
-<label>Blasts (%)</label><br>
-<input id="blasts"><br>
+<div class="container">
+<div class="card">
+<h3>CD45 vs SSC Simulation</h3>
+<canvas id="flowPlot" width="350" height="250"></canvas>
+</div>
+<!-- CBC PANEL -->
+<div class="card">
+<h3>CBC Parameters</h3>
+<label>Blasts (%)</label>
+<input id="blasts">
 
-<label>Lymphocytes (%)</label><br>
-<input id="lymph"><br>
+<label>Lymphocytes (%)</label>
+<input id="lymph">
 
-<label>Myeloid Precursors (%)</label><br>
-<input id="myeloid"><br>
+<label>Myeloid Precursors (%)</label>
+<input id="myeloid">
 
-<label>Basophils (%)</label><br>
-<input id="baso"><br><br>
+<label>Basophils (%)</label>
+<input id="baso">
+</div>
 
-<label>Markers (comma separated)</label><br>
-<input id="markers"><br>
+<!-- MARKERS -->
+<div class="card">
+<h3>Flow Cytometry Markers</h3>
 
-<label>Morphology (comma separated)</label><br>
-<input id="morphology"><br><br>
+<div id="markers">
+<span class="tag">MPO</span>
+<span class="tag">CD13</span>
+<span class="tag">CD33</span>
+<span class="tag">CD19</span>
+<span class="tag">CD3</span>
+<span class="tag">TdT</span>
+<span class="tag">CD5</span>
+<span class="tag">CD23</span>
+<span class="tag">BCR-ABL</span>
+</div>
+</div>
 
-<button onclick="analyze()">Analyze</button>
+<!-- MORPHOLOGY -->
+<div class="card">
+<h3>Morphology</h3>
 
-<pre id="output"></pre>
+<div id="morphology">
+<span class="tag">Auer rods</span>
+<span class="tag">Smudge cells</span>
+<span class="tag">Blasts present</span>
+</div>
+</div>
+
+<!-- RESULT -->
+<div class="card">
+<h3>Analysis</h3>
+
+<button onclick="analyze()">Run Analysis</button>
+
+<div id="results" class="result"></div>
+<div id="interpretation" class="interpretation"></div>
+
+</div>
+
+</div>
 
 <script>
+
+// Toggle tags
+document.querySelectorAll(".tag").forEach(tag => {
+    tag.addEventListener("click", () => {
+        tag.classList.toggle("active");
+    });
+});
+
+function getSelected(id) {
+    return Array.from(document.querySelectorAll(`#${id} .tag.active`))
+        .map(x => x.innerText);
+}
+
 async function analyze() {
     const data = {
         blasts: parseFloat(document.getElementById("blasts").value),
         lymph: parseFloat(document.getElementById("lymph").value),
         myeloid: parseFloat(document.getElementById("myeloid").value),
         baso: parseFloat(document.getElementById("baso").value),
-        markers: document.getElementById("markers").value.split(",").map(x => x.trim()),
-        morphology: document.getElementById("morphology").value.split(",").map(x => x.trim())
+        markers: getSelected("markers"),
+        morphology: getSelected("morphology")
     };
 
-    const response = await fetch("https://leukemia-analyzer.onrender.com/analyze", {
+    document.getElementById("results").innerHTML = "Analyzing...";
+
+    const res = await fetch("https://leukemia-analyzer.onrender.com/analyze", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify(data)
     });
 
-    const result = await response.json();
+    const result = await res.json();
 
-    document.getElementById("output").textContent =
-        JSON.stringify(result, null, 2);
+    displayResults(result);
+
+    // DRAW FLOW PLOT
+    drawFlow(data.blasts);
+
+    // STORE for PDF
+    window.lastResult = result;
+    window.lastInput = data;
+}
+
+function displayResults(result) {
+    const probs = result.probabilities;
+    let html = "";
+
+    for (let key in probs) {
+        html += `
+        <div>${key} (${probs[key].toFixed(1)}%)</div>
+        <div class="bar">
+            <div class="fill ${key}" style="width:${probs[key]}%"></div>
+        </div>`;
+    }
+
+    document.getElementById("results").innerHTML = html;
+
+    document.getElementById("interpretation").innerHTML =
+        "<b>Most Likely:</b> " + result.most_likely +
+        "<br><b>Next Steps:</b><br>" +
+        result.next_steps.join("<br>");
 }
 </script>
+<script>
 
+function drawFlow(blasts) {
+    const canvas = document.getElementById("flowPlot");
+    const ctx = canvas.getContext("2d");
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    function drawCluster(x, y, color, label) {
+        for (let i = 0; i < 40; i++) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(
+                x + Math.random()*30,
+                y + Math.random()*30,
+                3,
+                0,
+                2 * Math.PI
+            );
+            ctx.fill();
+        }
+        ctx.fillStyle = "white";
+        ctx.fillText(label, x, y);
+    }
+
+    // Normal populations
+    drawCluster(50, 180, "#3b82f6", "Lymph");
+    drawCluster(200, 50, "#22c55e", "Gran");
+    drawCluster(120, 120, "#f59e0b", "Mono");
+
+    // Blasts (size depends on %)
+    if (blasts > 5) {
+        drawCluster(60, 60, "#ef4444", "Blasts");
+    }
+}
+
+// PDF EXPORT
+async function exportPDF(result, data) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.text("Leukemia Analysis Report", 10, 10);
+
+    doc.text("Inputs:", 10, 20);
+    doc.text(JSON.stringify(data, null, 2), 10, 30);
+
+    doc.text("Results:", 10, 80);
+    doc.text(JSON.stringify(result, null, 2), 10, 90);
+
+    doc.save("report.pdf");
+}
+
+</script>
 </body>
 </html>
