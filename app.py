@@ -5,6 +5,10 @@ import os
 app = Flask(__name__)   # ← THIS is what you're missing
 CORS(app)
 
+@app.route("/")
+def home():
+    return "Leukemia Analyzer API is running"
+
 def compute_scores(data):
     blasts = data.get("blasts", 0)
     lymph = data.get("lymph", 0)
