@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leukemia Analyzer v2</title>
+</head>
+<body>
+
+<h2>Leukemia Diagnostic Tool (v2)</h2>
+
+<label>Blasts (%)</label><br>
+<input id="blasts"><br>
+
+<label>Lymphocytes (%)</label><br>
+<input id="lymph"><br>
+
+<label>Myeloid Precursors (%)</label><br>
+<input id="myeloid"><br>
+
+<label>Basophils (%)</label><br>
+<input id="baso"><br><br>
+
+<label>Markers (comma separated)</label><br>
+<input id="markers"><br>
+
+<label>Morphology (comma separated)</label><br>
+<input id="morphology"><br><br>
+
+<button onclick="analyze()">Analyze</button>
+
+<pre id="output"></pre>
+
+<script>
+async function analyze() {
+    const data = {
+        blasts: parseFloat(document.getElementById("blasts").value),
+        lymph: parseFloat(document.getElementById("lymph").value),
+        myeloid: parseFloat(document.getElementById("myeloid").value),
+        baso: parseFloat(document.getElementById("baso").value),
+        markers: document.getElementById("markers").value.split(",").map(x => x.trim()),
+        morphology: document.getElementById("morphology").value.split(",").map(x => x.trim())
+    };
+
+    const response = await fetch("http://127.0.0.1:5000/analyze", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    document.getElementById("output").textContent =
+        JSON.stringify(result, null, 2);
+}
+</script>
+
+</body>
+</html>
