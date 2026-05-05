@@ -1,5 +1,8 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
+app = Flask(__name__)   # ← THIS is what you're missing
+CORS(app)
 
 def compute_scores(data):
     blasts = data.get("blasts", 0)
